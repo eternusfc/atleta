@@ -164,3 +164,19 @@ select option{background:var(--card2)}
 @media(max-width:380px){
   .stats,.week{grid-template-columns:1fr}
 }
+
+/* ===== gráficos interativos ===== */
+.chart-box{width:100%}
+.chart-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 6px}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{background:var(--card2);color:var(--muted);border:0;padding:5px 11px;font:700 12px var(--font);cursor:pointer}
+.chip:hover{background:var(--line);color:var(--text)}
+.chip.active{background:var(--accent);color:#fff}
+.chart-wrap{position:relative}
+svg.chart{cursor:crosshair;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+svg.chart.drag{cursor:grabbing}
+.chart-tip{position:absolute;z-index:5;transform:translate(-50%,-100%);background:#000;border:1px solid var(--line);border-top:3px solid var(--accent2);padding:7px 10px;font-size:12px;line-height:1.45;white-space:nowrap;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.6)}
+.chart-tip.below{transform:translate(-50%,0)}
+.chart-tip i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.chart-hint{margin-top:4px}
+@media(max-width:600px){.chip{padding:7px 12px}.chart-hint{display:none}}

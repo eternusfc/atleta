@@ -190,27 +190,3 @@ function setBar(i, value, max, over = false) {
   i.style.width = Math.max(0, Math.min(1, value / Math.max(max, 1e-9))) * 100 + '%';
   i.style.background = over ? 'var(--accent2)' : i.dataset.c;
 }
-
-/** Gráfico de linha em SVG. pts: [[rótulo, valor]] */
-function lineChart(pts, { color = '#8C1C3C', fmt = v => v.toFixed(1), height = 220 } = {}) {
-  const W = 640, H = height, L = 62, R = 24, T = 22, B = 32;
-  if (!pts.length) return `<svg class="chart" viewBox="0 0 ${W} ${H}"><text x="${W / 2}" y="${H / 2}" fill="#8C8C8C" font-size="14" text-anchor="middle">Sem dados ainda</text></svg>`;
-  const vals = pts.map(p => p[1]);
-  let lo = Math.min(...vals), hi = Math.max(...vals);
-  if (lo === hi) { lo -= 1; hi += 1; }
-  const pd = (hi - lo) * 0.12; lo -= pd; hi += pd;
-  const pw = W - L - R, ph = H - T - B, n = pts.length;
-  const X = i => L + (n === 1 ? pw / 2 : pw * i / (n - 1));
-  const Y = v => T + ph * (1 - (v - lo) / (hi - lo));
-  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" font-family="Segoe UI,system-ui,sans-serif">`;
-  for (let k = 0; k < 5; k++) {
-    const v = lo + (hi - lo) * k / 4, y = Y(v);
-    s += `<line x1="${L}" y1="${y}" x2="${W - R}" y2="${y}" stroke="#2A2A2A"/><text x="${L - 8}" y="${y + 4}" fill="#8C8C8C" font-size="11" text-anchor="end">${esc(fmt(v))}</text>`;
-  }
-  if (n > 1) s += `<polyline fill="none" stroke="${color}" stroke-width="2.5" points="${pts.map((p, i) => X(i) + ',' + Y(p[1])).join(' ')}"/>`;
-  pts.forEach((p, i) => { s += `<circle cx="${X(i)}" cy="${Y(p[1])}" r="4" fill="${color}" stroke="#141414" stroke-width="2"/>`; });
-  const idx = n > 2 ? [...new Set([0, Math.floor(n / 2), n - 1])] : pts.map((_, i) => i);
-  idx.forEach(i => { s += `<text x="${X(i)}" y="${H - 12}" fill="#8C8C8C" font-size="11" text-anchor="middle">${esc(pts[i][0])}</text>`; });
-  s += `<text x="${X(n - 1)}" y="${Y(vals[n - 1]) - 12}" fill="#fff" font-size="12" font-weight="700" text-anchor="middle">${esc(fmt(vals[n - 1]))}</text></svg>`;
-  return s;
-}

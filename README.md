@@ -48,7 +48,7 @@ janela anônima de alguns navegadores (o armazenamento é bloqueado ou descartad
 
 | Tela | O que faz |
 |---|---|
-| **📊 Painel** | Saudação, meta do dia, consumido, restante e gasto estimado; macros do dia; treino planejado e realizado; tarefas concluídas; gráfico de peso (30 últimos registros). |
+| **📊 Painel** | Saudação, meta do dia, consumido, restante e gasto estimado; macros do dia; treino planejado e realizado; tarefas concluídas; gráfico interativo de peso. |
 | **✅ Tarefas do dia** | Lista diária por data, com categorias, tarefas fixas ("repetir todo dia"), edição, apagar, trazer pendências de ontem e barra de progresso. Duplo clique conclui/reabre. |
 | **🍽 Alimentação** | Lança alimentos por refeição e data com preenchimento automático dos macros (por gramas), salva alimentos novos, usa e cria **refeições modelo**, mostra resumo e balanço calórico do dia. |
 | **🏋 Treinos** | Quatro abas: **Academia** (séries, reps, carga), **Cardio** (contínuo ou HIIT, com pace), **Futsal** (treinos e jogos com placar, gols e assistências) e **Mobilidade** (método e regiões). Permite informar kcal manualmente ou estimar por MET. |
@@ -73,6 +73,7 @@ atleta-web/
 └── js/
     ├── util.js             # constantes, datas, números, energia, componentes de UI
     ├── db.js               # camada de dados (IndexedDB) + exportar/importar
+    ├── chart.js            # gráfico de linha interativo (tooltip, período, zoom)
     ├── app.js              # núcleo: helpers compartilhados, navegação, backup, init
     └── pages/
         ├── dashboard.js    # Painel
@@ -127,7 +128,7 @@ direto do disco (`file://`).
 | `mkTable(colunas, opts)` | Tabela com seleção de linha (`set`, `selected`, `select`) |
 | `mkTabs([[rotulo, elemento]])` | Abas |
 | `setBar(i, valor, max, excedeu)` | Barra de progresso |
-| `lineChart(pontos, opts)` | Gráfico de linha em SVG |
+| `mkChart(opts)` (`chart.js`) | Gráfico de linha interativo em SVG — ver [Gráficos](#gráficos-interativos) |
 | `toast(msg)` / `info(msg)` | Aviso discreto / alerta |
 | `esc(texto)` | Escapa HTML — **use sempre em texto digitado pelo usuário** |
 
@@ -256,6 +257,32 @@ cutting (−20 %), bulking leve (+10 %), bulking (+15 %).
 **Evolução de carga:** 1RM estimado pela fórmula de Epley, `carga × (1 + reps/30)`; volume = `Σ reps × carga`.
 
 Os valores são estimativas para acompanhamento, não prescrição médica ou nutricional.
+
+---
+
+## Gráficos interativos
+
+Os gráficos de peso (Painel), carga por exercício e pace (Evolução) usam `mkChart` (`js/chart.js`):
+
+| Recurso | Como usar |
+|---|---|
+| **Tooltip** | Passe o mouse ou toque no gráfico: mostra data, valor, variação em relação ao ponto anterior e um detalhe extra (ex.: reps, 1RM, distância). |
+| **Período** | Botões **7 dias / 30 dias / 90 dias / Tudo** (peso abre em 30 dias; os demais em "Tudo"). |
+| **Zoom** | Roda do mouse (no ponto do cursor), botões **− / + / Reset** ou pinça no celular. |
+| **Mover** | Arraste o gráfico (mouse ou dedo) quando estiver com zoom. |
+| **Resetar** | Duplo clique ou botão **Reset**. |
+
+O eixo X é proporcional ao tempo (dias sem registro aparecem como intervalos) e o eixo Y
+se ajusta aos valores visíveis. Uso:
+
+```js
+const ch = mkChart({ name: 'Peso', color: '#E04F74', period: 30,
+                     fmt: v => v.toFixed(1) + ' kg', fmtDelta: d => (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) });
+container.appendChild(ch.el);
+ch.set([['2026-11-01', 75.2], ['2026-11-02', 75.0, 'detalhe opcional']]);   // [dataISO, valor, extra]
+```
+
+Opções: `name`, `color`, `fmt` (valor no tooltip), `axisFmt` (eixo), `fmtDelta`, `height`, `period`, `periods`.
 
 ---
 

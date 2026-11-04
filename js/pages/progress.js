@@ -22,6 +22,13 @@ Pages.prog = app => {
   const mtable = mkTable([['Data', 'c'], ['Método'], ['Regiões'], ['Min', 'r']], { empty: 'Nenhuma sessão registrada.' });
   q(mob, '[data-x="table"]').appendChild(mtable.el);
 
+  const gchart = mkChart({ name: 'Maior carga', color: '#E04F74', fmt: v => g(v, 2) + ' kg', axisFmt: v => v.toFixed(1),
+    fmtDelta: d => (d >= 0 ? '+' : '−') + g(Math.abs(d), 2) + ' kg' });
+  const cchart = mkChart({ name: 'Pace', color: '#F2F2F2', fmt: v => fmtPace(v) + '/km', axisFmt: v => fmtPace(v),
+    fmtDelta: d => (d >= 0 ? '+' : '−') + fmtPace(Math.abs(d)) + '/km' });
+  q(gym, '[data-x="chart"]').appendChild(gchart.el);
+  q(card, '[data-x="chart"]').appendChild(cchart.el);
+
   s.body.appendChild(mkTabs([['🏋 Academia', gym], ['🏃 Cardio', card], ['⚽ Futsal', fut], ['🧘 Mobilidade', mob]]).el);
   F(gym, 'ex').addEventListener('change', () => drawGym());
   F(card, 'mod').addEventListener('change', () => drawCardio());
@@ -36,10 +43,10 @@ Pages.prog = app => {
       const sets = by.get(d), best = Math.max(...sets.map(x => x.load));
       const repsBest = Math.max(...sets.filter(x => x.load === best).map(x => x.reps));
       const vol = sets.reduce((a, x) => a + x.reps * x.load, 0), rm = Math.max(...sets.map(x => x.load * (1 + x.reps / 30)));
-      pts.push([shortD(d), best]);
+      pts.push([d, best, `${repsBest} reps • ${sets.length} ${sets.length === 1 ? 'série' : 'séries'} • 1RM est. ${rm.toFixed(1)} kg`]);
       rows.push({ cells: [fmtD(d), sets.length, g(best, 2), repsBest, vol.toFixed(0), rm.toFixed(1)] });
     }
-    q(gym, '[data-x="chart"]').innerHTML = lineChart(pts, { color: '#8C1C3C', fmt: v => `${v.toFixed(1)} kg`, height: 230 });
+    gchart.set(pts);
     gtable.set(rows.reverse());
     q(gym, '[data-x="sum"]').textContent = pts.length >= 2 ? `Progressão: ${g(pts[0][1], 2)} → ${g(pts.at(-1)[1], 2)} kg (${pts.at(-1)[1] - pts[0][1] >= 0 ? '+' : ''}${g(pts.at(-1)[1] - pts[0][1], 2)} kg)` : '';
   }
@@ -47,8 +54,8 @@ Pages.prog = app => {
     const mod = val(card, 'mod'), W = await wmap();
     const rows = (await DB.where('cardio', 'modality', mod)).map(c => ({ ...c, w: W.get(c.workout_id) })).filter(r => r.w)
       .sort((a, b) => a.w.date.localeCompare(b.w.date) || a.workout_id - b.workout_id);
-    const pts = rows.filter(r => r.pace && r.mode !== 'HIIT').map(r => [shortD(r.w.date), r.pace]);
-    q(card, '[data-x="chart"]').innerHTML = lineChart(pts, { color: '#F2F2F2', fmt: v => fmtPace(v) + '/km', height: 230 });
+    const pts = rows.filter(r => r.pace && r.mode !== 'HIIT').map(r => [r.w.date, r.pace, `${g(r.distance, 2)} km • ${r.w.duration.toFixed(0)} min`]);
+    cchart.set(pts);
     ctable.set([...rows].reverse().map(r => ({ cells: [fmtD(r.w.date), r.mode === 'HIIT' ? `HIIT ${r.rounds}×${r.work_s}/${r.rest_s}s` : 'Contínuo',
       r.distance ? g(r.distance, 2) : '-', r.w.duration.toFixed(0), r.pace ? fmtPace(r.pace) : '-', r.w.rpe] })));
     q(card, '[data-x="sum"]').textContent = pts.length >= 2 ? `Pace: ${fmtPace(pts[0][1])} → ${fmtPace(pts.at(-1)[1])} /km` : '';

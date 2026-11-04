@@ -23,6 +23,9 @@ Pages.dash = app => {
       </div>
     </div>`;
   const X = n => q(s.body, `[data-x="${n}"]`);
+  const wchart = mkChart({ name: 'Peso', color: '#E04F74', height: 260, period: 30, periods: [7, 30, 90, 0],
+    fmt: v => v.toFixed(1) + ' kg', axisFmt: v => v.toFixed(1), fmtDelta: d => (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + ' kg' });
+  X('chart').appendChild(wchart.el);
 
   async function refresh() {
     const p = await DB.getProfile(), iso = todayISO(), hr = new Date().getHours();
@@ -56,8 +59,7 @@ Pages.dash = app => {
     await app.ensureDailyTodos(iso);
     const td = await DB.where('todos', 'date', iso);
     X('todo').textContent = td.length ? `Tarefas de hoje: ${td.filter(t => t.done).length}/${td.length} concluídas` : 'Tarefas de hoje: nenhuma cadastrada';
-    const wl = (await DB.all('weight_log')).sort((a, b) => a.date.localeCompare(b.date)).slice(-30);
-    X('chart').innerHTML = lineChart(wl.map(r => [shortD(r.date), r.weight]), { color: '#E04F74', height: 260 });
+    wchart.set((await DB.all('weight_log')).map(r => [r.date, r.weight]));
   }
   return { el: s.el, refresh };
 };
