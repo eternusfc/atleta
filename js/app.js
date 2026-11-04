@@ -45,6 +45,8 @@ const App = {
       this.navEls[k].classList.toggle('active', k === key);
     }
     document.getElementById('content').scrollTop = 0;
+    window.scrollTo(0, 0);
+    document.body.classList.remove('menu-open');
     await this.pages[key].refresh();
   },
   refreshCurrent() { return this.pages[this.current].refresh(); },
@@ -102,6 +104,9 @@ const App = {
       nav.appendChild(n);
       this.navEls[key] = n;
     }
+    const toggleMenu = () => document.body.classList.toggle('menu-open');
+    document.getElementById('btnMenu').onclick = toggleMenu;
+    document.getElementById('scrim').onclick = toggleMenu;
     document.getElementById('btnExport').onclick = () => this.exportJSON();
     const file = document.getElementById('fileImport');
     document.getElementById('btnImport').onclick = () => file.click();
