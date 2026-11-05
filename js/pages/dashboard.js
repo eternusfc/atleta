@@ -13,6 +13,14 @@ Pages.dash = app => {
       <div class="card pad">
         <h3>Macronutrientes de hoje</h3>
         ${macros.map(([k, t, c]) => `<div class="mrow"><div class="between"><span>${t}</span><span class="muted sm" data-m="${k}"></span></div><div class="bar"><i data-b="${k}" data-c="${c}"></i></div></div>`).join('')}
+        <h3>Água de hoje</h3>
+        <div class="mrow"><div class="between"><span>Hidratação</span><span class="muted sm" data-x="wtxt"></span></div><div class="bar"><i data-x="wbar" data-c="var(--blue)"></i></div></div>
+        <div class="btns">
+          <button type="button" class="btn ghost" data-act="water" data-ml="200">+200 ml</button>
+          <button type="button" class="btn ghost" data-act="water" data-ml="300">+300 ml</button>
+          <button type="button" class="btn ghost" data-act="water" data-ml="500">+500 ml</button>
+          <button type="button" class="btn danger" data-act="water" data-ml="-200">Desfazer 200</button>
+        </div>
         <h3>Planejado para hoje</h3><p class="muted pre" data-x="plan"></p>
         <h3>Treinos de hoje</h3><p class="muted pre" data-x="train"></p>
       </div>
@@ -27,10 +35,18 @@ Pages.dash = app => {
     fmt: v => v.toFixed(1) + ' kg', axisFmt: v => v.toFixed(1), fmtDelta: d => (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + ' kg' });
   X('chart').appendChild(wchart.el);
 
+    async function drawWater() {
+    const { ml, goal } = await app.water(todayISO());
+    X('wtxt').textContent = `${fmtL(ml)} / ${fmtL(goal)} L`;
+    setBar(X('wbar'), ml, goal);
+  }
+  bindActions(s.body, { async water(b) { await DB.addWater(todayISO(), Number(b.dataset.ml)); await drawWater(); } });
+
   async function refresh() {
     const p = await DB.getProfile(), iso = todayISO(), hr = new Date().getHours();
     const greet = hr < 12 ? 'Bom dia' : hr < 18 ? 'Boa tarde' : 'Boa noite';
     s.titleEl.textContent = `${greet}, ${(p && p.name ? p.name.trim().split(/\s+/)[0] : 'craque')}! ⚽`;
+    await drawWater();
     if (!p) {
       qa(s.body, '[data-s]').forEach(e => e.textContent = '—');
       X('train').textContent = 'Preencha seu Perfil para calcular suas metas.';
@@ -54,8 +70,11 @@ Pages.dash = app => {
         `\nTotal gasto nos treinos: ${ws.reduce((a, w) => a + w.kcal, 0).toFixed(0)} kcal`
       : 'Nenhum treino registrado hoje.';
     X('plan').textContent = await app.planText(iso);
-    const wk = (await DB.between('workouts', 'date', weekStartISO(), '9999-12-31'));
-    X('week').textContent = `Semana: ${wk.length} treino(s) • ${wk.reduce((a, w) => a + w.duration, 0).toFixed(0)} min`;
+        const wk = (await DB.between('workouts', 'date', weekStartISO(), '9999-12-31'));
+    const loads = await app.weekLoads(), cur = loads.at(-1), prev = loads.at(-2);
+    const chg = cur && prev ? pctChange(cur.load, prev.load) : null;
+    X('week').textContent = `Semana: ${wk.length} treino(s) • ${wk.reduce((a, w) => a + w.duration, 0).toFixed(0)} min` +
+      (cur ? ` • carga ${cur.load.toFixed(0)} UA` + (chg != null ? ` (${fmtPct(chg)} vs. semana passada)` : '') : '');
     await app.ensureDailyTodos(iso);
     const td = await DB.where('todos', 'date', iso);
     X('todo').textContent = td.length ? `Tarefas de hoje: ${td.filter(t => t.done).length}/${td.length} concluídas` : 'Tarefas de hoje: nenhuma cadastrada';

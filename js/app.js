@@ -36,6 +36,23 @@ const App = {
     for (const m of await DB.where('meals', 'date', iso)) for (const k in t) t[k] += m[k] || 0;
     return t;
   },
+    /** Carga por semana (seg–dom), incluindo semanas vazias entre o 1º treino e hoje. */
+  async weekLoads() {
+    const m = new Map();
+    for (const w of await DB.all('workouts')) {
+      const k = weekStartOf(w.date), r = m.get(k) || { week: k, sessions: 0, min: 0, load: 0 };
+      r.sessions++; r.min += w.duration || 0; r.load += sessionLoad(w); m.set(k, r);
+    }
+    if (!m.size) return [];
+    const out = [], end = weekStartISO();
+    for (let d = [...m.keys()].sort()[0]; d <= end; d = addDays(d, 7)) out.push(m.get(d) || { week: d, sessions: 0, min: 0, load: 0 });
+    return out;
+  },
+  /** Água do dia: consumido e meta (peso + minutos de treino do dia). */
+  async water(iso) {
+    const mins = (await DB.where('workouts', 'date', iso)).filter(w => w.kind !== 'Mobilidade').reduce((s, w) => s + (w.duration || 0), 0);
+    return { ml: await DB.getWater(iso), goal: waterGoal(await this.weight(), mins) };
+  },
 
   /* ---- navegação ---- */
   async show(key) {

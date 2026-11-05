@@ -23,7 +23,7 @@
    ========================================================================== */
 const DB = (() => {
   const NAME = 'atleta-eternus-fc';
-  const VERSION = 1;
+  const VERSION = 2;
   const BACKUP_FORMAT = 'atleta-eternus-fc-backup';
 
   // keyPath padrão 'id'; auto = autoIncrement
@@ -43,6 +43,7 @@ const DB = (() => {
     todos:          { auto: true, indexes: [['date', 'date']] },
     todo_daily:     { auto: true },
     todo_generated: { keyPath: 'date' },
+    water_log:      { keyPath: 'date', },
     meta:           { keyPath: 'key' },
   };
   const DATA_STORES = Object.keys(SCHEMA).filter(s => s !== 'meta');
@@ -196,10 +197,21 @@ const DB = (() => {
     await done(t);
   }
 
+    /* ----- água ----- */
+  const getWater = async iso => (await get('water_log', iso))?.ml || 0;
+  function addWater(iso, delta) {
+    const t = db.transaction('water_log', 'readwrite'), st = t.objectStore('water_log');
+    const r = st.get(iso);
+    r.onsuccess = () => st.put({ date: iso, ml: Math.max(0, (r.result?.ml || 0) + delta) });
+    return done(t);
+  }
+
   return {
     open, seed, all, get, put, add, del, where, between, count,
     getProfile, saveProfile, logWeight, upsertFood,
     saveWorkout, deleteWorkout, createTemplate, deleteTemplate,
-    exportAll, inspectBackup, importAll, resetAll,
+    exportAll, inspectBackup, importAll, resetAll, getWater, addWater
   };
 })();
+
+

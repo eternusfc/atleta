@@ -77,6 +77,16 @@ const fmtPace = s => (!s ? '-' : `${Math.floor(s / 60)}:${pad(Math.round(s % 60)
 const kcalFromMet = (met, kg, min) => met * kg * (min / 60);
 const g = (v, d = 1) => (+v).toFixed(d).replace(/\.0+$/, ''); // número "limpo" (como :g)
 
+/* -------------------------------------------- carga de treino e hidratação --- */
+/** Carga da sessão (session-RPE): RPE × minutos. Mobilidade (RPE 0) não soma. */
+const sessionLoad = w => (w.rpe || 0) * (w.duration || 0);
+const weekStartOf = iso => addDays(iso, -weekdayIdx(iso));
+const pctChange = (cur, prev) => (prev > 0 ? (cur - prev) / prev * 100 : null);
+const fmtPct = p => (p == null ? '-' : (p >= 0 ? '+' : '−') + Math.abs(p).toFixed(0) + '%');
+/** Meta de água em ml: 35 ml/kg + 500 ml por hora de treino. */
+const waterGoal = (kg, trainMin = 0) => 35 * kg + 500 * trainMin / 60;
+const fmtL = ml => (ml / 1000).toFixed(2).replace('.', ',');
+
 /* ---------------------------------------------------- cálculo de energia --- */
 /** TMB + NEAT + EAT + TEF. Katch-McArdle (com % gordura) ou Mifflin-St Jeor. */
 function energy(p, eat = 0) {

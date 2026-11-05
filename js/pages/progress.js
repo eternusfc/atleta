@@ -22,6 +22,14 @@ Pages.prog = app => {
   const mtable = mkTable([['Data', 'c'], ['Método'], ['Regiões'], ['Min', 'r']], { empty: 'Nenhuma sessão registrada.' });
   q(mob, '[data-x="table"]').appendChild(mtable.el);
 
+  const load = h(`<div><b data-x="sum" style="color:var(--accent2);display:block;margin:4px 0"></b>
+    <p class="muted sm" data-x="note"></p><div data-x="chart"></div><div data-x="table" style="margin-top:8px"></div></div>`);
+  const ltable = mkTable([['Semana (início)', 'c'], ['Treinos', 'r'], ['Minutos', 'r'], ['Carga (UA)', 'r'], ['vs. anterior', 'r']], { empty: 'Sem registros' });
+  q(load, '[data-x="table"]').appendChild(ltable.el);
+  const lchart = mkChart({ name: 'Carga semanal', color: '#E04F74', periods: [90, 180, 0], period: 0,
+    fmt: v => v.toFixed(0) + ' UA', axisFmt: v => v.toFixed(0), fmtDelta: d => (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(0) + ' UA' });
+  q(load, '[data-x="chart"]').appendChild(lchart.el);
+
   const gchart = mkChart({ name: 'Maior carga', color: '#E04F74', fmt: v => g(v, 2) + ' kg', axisFmt: v => v.toFixed(1),
     fmtDelta: d => (d >= 0 ? '+' : '−') + g(Math.abs(d), 2) + ' kg' });
   const cchart = mkChart({ name: 'Pace', color: '#F2F2F2', fmt: v => fmtPace(v) + '/km', axisFmt: v => fmtPace(v),
@@ -29,7 +37,7 @@ Pages.prog = app => {
   q(gym, '[data-x="chart"]').appendChild(gchart.el);
   q(card, '[data-x="chart"]').appendChild(cchart.el);
 
-  s.body.appendChild(mkTabs([['🏋 Academia', gym], ['🏃 Cardio', card], ['⚽ Futsal', fut], ['🧘 Mobilidade', mob]]).el);
+    s.body.appendChild(mkTabs([['🏋 Academia', gym], ['🏃 Cardio', card], ['⚽ Futsal', fut], ['🧘 Mobilidade', mob], ['📊 Carga semanal', load]]).el);
   F(gym, 'ex').addEventListener('change', () => drawGym());
   F(card, 'mod').addEventListener('change', () => drawCardio());
   const wmap = async () => new Map((await DB.all('workouts')).map(w => [w.id, w]));
@@ -84,12 +92,26 @@ Pages.prog = app => {
     mtable.set(rows.map(r => ({ cells: [fmtD(r.w.date), esc(r.method || '-'), esc(r.areas || '-'), r.w.duration.toFixed(0)] })));
   }
 
+  async function drawLoad() {
+    const rows = await app.weekLoads();
+    lchart.set(rows.map(r => [r.week, r.load, `${r.sessions} treino(s) • ${r.min.toFixed(0)} min`]));
+    ltable.set([...rows].reverse().map((r, i, arr) => {
+      const p = arr[i + 1] ? pctChange(r.load, arr[i + 1].load) : null;
+      return { cells: [fmtD(r.week), r.sessions, r.min.toFixed(0), r.load.toFixed(0), (p != null && p > 30 ? '⚠ ' : '') + fmtPct(p)] };
+    }));
+    const cur = rows.at(-1), before = rows.slice(-5, -1);
+    const avg = before.length ? before.reduce((a, r) => a + r.load, 0) / before.length : null;
+    q(load, '[data-x="sum"]').textContent = cur
+      ? `Esta semana: ${cur.load.toFixed(0)} UA` + (avg != null ? ` • média das ${before.length} semanas anteriores: ${avg.toFixed(0)} UA` : '') : '';
+    q(load, '[data-x="note"]').textContent = 'Carga = RPE × minutos de cada treino. ⚠ marca aumento acima de 30% sobre a semana anterior. Treinos sem RPE (como mobilidade) não somam.';
+  }
+
   async function refresh() {
     const exs = [...new Set((await DB.all('gym_sets')).map(x => x.exercise))].sort((a, b) => a.localeCompare(b, 'pt'));
     const cur = val(gym, 'ex');
     F(gym, 'ex').innerHTML = exs.map(e => `<option>${esc(e)}</option>`).join('');
     setv(gym, 'ex', exs.includes(cur) ? cur : (exs[0] || ''));
-    await Promise.all([drawGym(), drawCardio(), drawFootball(), drawMobility()]);
+    await Promise.all([drawGym(), drawCardio(), drawFootball(), drawMobility(), drawLoad()]);
   }
   return { el: s.el, refresh };
 };
